@@ -37,9 +37,17 @@ function sleep(ms) {
  * @throws {Error} Si Nominatim no encuentra la zona o el request falla.
  */
 export async function geocodificar(zona) {
-  const params = new URLSearchParams({ q: zona, format: 'json', limit: '1' });
+  // countrycodes=ar y bounded=1 evitan que barrios argentinos se
+  // resuelvan como lugares homónimos de otros países (ej: Liniers, Francia).
+  const params = new URLSearchParams({
+    q: zona,
+    format: 'json',
+    limit: '1',
+    countrycodes: 'ar',
+    bounded: '1',
+  });
   const res = await fetch(`${NOMINATIM_URL}?${params}`, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: { 'User-Agent': USER_AGENT, 'Accept-Language': 'es' },
   });
 
   if (!res.ok) {
