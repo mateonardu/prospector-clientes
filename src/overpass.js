@@ -133,6 +133,24 @@ export async function queryByTagsAndCentro(tags, centro, radioKm = 2) {
 
     if (res.ok) {
       const data = await res.json();
+
+      // Bajo carga, Overpass puede responder 200 con un "remark" de
+      // timeout/memoria y elements vacío o incompleto. Tratarlo como
+      // transitorio y reintentar, en vez de devolver 0 resultados falsos.
+      const remark = data.remark ?? '';
+      if (/timed out|out of memory|error/i.test(remark)) {
+        if (intento < intentosMax) {
+          const esperaSeg = intento * 10;
+          console.error(
+            `Overpass devolvió un error interno ("${remark.slice(0, 120)}"), ` +
+              `reintentando en ${esperaSeg}s (intento ${intento}/${intentosMax})...`
+          );
+          await sleep(esperaSeg * 1000);
+          continue;
+        }
+        throw new Error(`Overpass no pudo completar la consulta: ${remark.slice(0, 200)}`);
+      }
+
       return data.elements ?? [];
     }
 
