@@ -67,22 +67,27 @@ export async function geocodificar(zona) {
  * Construye la query Overpass QL: busca nodes y ways con cualquiera
  * de los tags dados dentro de un radio alrededor de un punto.
  *
- * @param {string[]} tags - Tags OSM tipo ["shop=beauty", "amenity=dentist"].
+ * @param {import('./rubros.js').EntradaRubro[]} tags - Tags OSM tipo
+ *   ["shop=beauty"] o { tag, nombre } para filtrar además por nombre.
  * @param {{lat: number, lon: number}} centro
  * @param {number} radioMetros
  * @returns {string} Query Overpass QL.
  */
 function construirQuery(tags, centro, radioMetros) {
   const clausulas = tags
-    .flatMap((tag) => {
+    .flatMap((entrada) => {
+      const { tag, nombre } = typeof entrada === 'string' ? { tag: entrada } : entrada;
       const [clave, valor] = tag.split('=');
-      const filtro = `["${clave}"="${valor}"](around:${radioMetros},${centro.lat},${centro.lon})`;
+      const filtroNombre = nombre ? `["name"~"${nombre}",i]` : '';
+      const filtro =
+        `["${clave}"="${valor}"]${filtroNombre}` +
+        `(around:${radioMetros},${centro.lat},${centro.lon})`;
       return [`node${filtro};`, `way${filtro};`];
     })
     .join('\n  ');
 
   // `out center` hace que los ways traigan un punto central calculado.
-  return `[out:json][timeout:60];
+  return `[out:json][timeout:180];
 (
   ${clausulas}
 );

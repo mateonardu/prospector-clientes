@@ -1,12 +1,18 @@
 /**
  * Mapeo de rubro legible (español) → tags OSM que identifican esa categoría.
- * Para agregar un rubro nuevo, agregá una línea: clave legible → array de tags "key=value".
+ * Para agregar un rubro nuevo, agregá una línea: clave legible → array de entradas.
+ * Cada entrada es un tag "key=value", o un objeto { tag, nombre } donde
+ * `nombre` es un regex (case-insensitive) que debe matchear el nombre del
+ * negocio — útil cuando OSM no tiene un tag específico para el rubro.
  *
- * @type {Record<string, string[]>}
+ * @typedef {string | { tag: string, nombre: string }} EntradaRubro
+ * @type {Record<string, EntradaRubro[]>}
  */
 export const RUBROS = {
   estetica: ['shop=beauty', 'shop=beauty_salon', 'amenity=beauty_salon'],
-  barberia: ['shop=barber', 'shop=barbershop'],
+  // Las barberías casi nunca tienen tag propio en OSM: están cargadas
+  // como shop=hairdresser con "barber/barbería" en el nombre.
+  barberia: ['shop=barber', { tag: 'shop=hairdresser', nombre: 'barber' }],
   nails: ['shop=nail_salon'],
   peluqueria: ['shop=hairdresser'],
   spa: ['leisure=spa', 'shop=massage'],
