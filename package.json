@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "scout": "node src/index.js"
+    "scout": "node src/index.js",
+    "web": "node src/server.js"
   },
   "engines": {
     "node": ">=18"

@@ -30,6 +30,14 @@ npm run scout -- --rubro veterinaria --zona "Morón, Buenos Aires" --radio 5
 
 El CSV se genera en `output/`, con nombre `prospects_{zona}_{rubro}_{fecha}.csv`.
 
+## Interfaz web (local)
+
+```bash
+npm run web
+```
+
+Abre `http://localhost:3000`: mismo buscador que el CLI pero con resultados en tabla (links clickeables a Google Maps y OSM), filtro "solo sin web" para priorizar prospectos, y botón para descargar el CSV. Es para uso local; no está pensada para hostearse pública.
+
 ## Rubros disponibles
 
 | Rubro | Busca en OSM |

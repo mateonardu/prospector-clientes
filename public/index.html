@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>scout-tool · Prospectos comerciales</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f6f8;
+      color: #1c2733;
+      padding: 2rem 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .subtitulo { color: #5c6b7a; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    form {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end;
+      background: #fff; padding: 1rem; border-radius: 10px;
+      border: 1px solid #dde3ea; margin-bottom: 1.25rem;
+    }
+    label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; font-weight: 600; }
+    select, input {
+      font: inherit; font-weight: 400; padding: 0.5rem 0.6rem;
+      border: 1px solid #c4cdd7; border-radius: 6px; min-width: 10rem;
+    }
+    input[type="number"] { min-width: 5.5rem; width: 5.5rem; }
+    button {
+      font: inherit; font-weight: 600; padding: 0.55rem 1.2rem;
+      border: none; border-radius: 6px; cursor: pointer;
+      background: #2563eb; color: #fff;
+    }
+    button:disabled { background: #9db4dd; cursor: wait; }
+    button.secundario { background: #eef2f7; color: #1c2733; border: 1px solid #c4cdd7; }
+    #estado { margin: 0.75rem 0; font-size: 0.95rem; min-height: 1.4em; }
+    #estado.error { color: #b91c1c; }
+    .stats { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; }
+    .stat {
+      background: #fff; border: 1px solid #dde3ea; border-radius: 8px;
+      padding: 0.5rem 0.9rem; font-size: 0.85rem; color: #5c6b7a;
+    }
+    .stat b { display: block; font-size: 1.2rem; color: #1c2733; }
+    .stat.destacado { border-color: #2563eb; }
+    .barra-acciones { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .barra-acciones label { flex-direction: row; align-items: center; gap: 0.4rem; font-weight: 400; font-size: 0.9rem; }
+    .tabla-wrap { overflow-x: auto; background: #fff; border: 1px solid #dde3ea; border-radius: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid #eef1f5; white-space: nowrap; }
+    th { background: #f8fafc; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: #5c6b7a; }
+    tr:last-child td { border-bottom: none; }
+    a { color: #2563eb; }
+    .vacio { color: #9aa7b4; }
+    .oculto { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🔍 scout-tool</h1>
+  <p class="subtitulo">Prospectos comerciales desde OpenStreetMap</p>
+
+  <form id="form">
+    <label>Rubro
+      <select id="rubro" required></select>
+    </label>
+    <label>Zona
+      <input id="zona" type="text" placeholder='Ej: Caballito, Buenos Aires' required>
+    </label>
+    <label>Radio (km)
+      <input id="radio" type="number" value="2" min="0.5" step="0.5">
+    </label>
+    <button id="btn-buscar" type="submit">Buscar</button>
+  </form>
+
+  <p id="estado"></p>
+
+  <div id="resultados" class="oculto">
+    <div class="stats" id="stats"></div>
+    <div class="barra-acciones">
+      <button id="btn-csv" class="secundario" type="button">⬇️ Descargar CSV</button>
+      <label><input type="checkbox" id="solo-sin-web"> Solo sin web (mejores prospectos)</label>
+    </div>
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Dirección</th><th>Barrio</th><th>Teléfono</th>
+            <th>Web</th><th>Instagram</th><th>Links</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let busquedaId = null;
+    let prospects = [];
+
+    const esc = (s) => String(s)
+      .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+
+    async function cargarRubros() {
+      const rubros = await (await fetch('/api/rubros')).json();
+      $('rubro').innerHTML = rubros
+        .map((r) => `<option value="${esc(r)}">${esc(r)}</option>`)
+        .join('');
+    }
+
+    function renderStats(r) {
+      $('stats').innerHTML = `
+        <div class="stat"><b>${r.total}</b>Total</div>
+        <div class="stat destacado"><b>${r.sin_web}</b>Sin web ← mejores</div>
+        <div class="stat"><b>${r.con_web}</b>Con web</div>
+        <div class="stat"><b>${r.con_telefono}</b>Con teléfono</div>
+        <div class="stat"><b>${r.con_instagram}</b>Con Instagram</div>`;
+    }
+
+    function renderTabla() {
+      const filtrados = $('solo-sin-web').checked
+        ? prospects.filter((p) => !p.tiene_web)
+        : prospects;
+
+      $('tbody').innerHTML = filtrados.map((p) => `
+        <tr>
+          <td><b>${esc(p.nombre)}</b></td>
+          <td>${esc(p.direccion)}</td>
+          <td>${esc(p.barrio) || '<span class="vacio">—</span>'}</td>
+          <td>${esc(p.telefono) || '<span class="vacio">—</span>'}</td>
+          <td>${p.tiene_web ? `<a href="${esc(p.url_web)}" target="_blank" rel="noopener">sitio</a>` : '<span class="vacio">NO</span>'}</td>
+          <td>${esc(p.instagram) || '<span class="vacio">—</span>'}</td>
+          <td>
+            <a href="${esc(p.google_maps_url)}" target="_blank" rel="noopener">Maps</a> ·
+            <a href="${esc(p.osm_url)}" target="_blank" rel="noopener">OSM</a>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="7" class="vacio">Sin resultados con este filtro</td></tr>';
+    }
+
+    $('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams({
+        rubro: $('rubro').value,
+        zona: $('zona').value.trim(),
+        radio: $('radio').value,
+      });
+
+      $('btn-buscar').disabled = true;
+      $('estado').className = '';
+      $('estado').textContent = '⏳ Buscando... (Overpass puede tardar hasta un minuto, y reintenta solo si está saturado)';
+      $('resultados').classList.add('oculto');
+
+      try {
+        const res = await fetch('/api/buscar?' + params);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        busquedaId = data.id;
+        prospects = data.prospects;
+
+        if (prospects.length === 0) {
+          $('estado').textContent = '⚠️ No se encontraron negocios. Probá con un radio mayor o revisá el nombre de la zona.';
+          return;
+        }
+
+        $('estado').textContent = `✅ ${prospects.length} prospectos en ${$('zona').value.trim()}`;
+        renderStats(data.resumen);
+        renderTabla();
+        $('resultados').classList.remove('oculto');
+      } catch (error) {
+        $('estado').className = 'error';
+        $('estado').textContent = '❌ ' + error.message;
+      } finally {
+        $('btn-buscar').disabled = false;
+      }
+    });
+
+    $('solo-sin-web').addEventListener('change', renderTabla);
+    $('btn-csv').addEventListener('click', () => {
+      if (busquedaId) window.location.href = '/api/csv?id=' + busquedaId;
+    });
+
+    cargarRubros();
+  </script>
+</body>
+</html>
