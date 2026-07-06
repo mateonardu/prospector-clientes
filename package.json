@@ -1,0 +1,17 @@
+{
+  "name": "scout-tool",
+  "version": "0.1.0",
+  "description": "CLI para generar listas de prospectos comerciales desde OpenStreetMap (Overpass)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "scout": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "csv-writer": "^1.6.0"
+  }
+}
