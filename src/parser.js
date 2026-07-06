@@ -17,6 +17,9 @@
  * @property {string} instagram
  * @property {number|''} lat
  * @property {number|''} lng
+ * @property {string} google_maps_url
+ * @property {string} osm_url
+ * @property {string} query_busqueda
  * @property {string} osm_id
  * @property {string} osm_type
  */
@@ -48,17 +51,33 @@ export function parseElements(elements) {
 
     const web = tags.website || tags['contact:website'] || '';
     const punto = element.type === 'node' ? element : element.center;
+    const barrio = tags['addr:suburb'] || tags['addr:neighbourhood'] || tags['addr:city'] || '';
+
+    // Con coordenadas el link a Maps es exacto; sin ellas se cae a una
+    // búsqueda por texto (omitiendo los placeholders "Sin dirección"/barrio vacío).
+    const tieneCoords = punto?.lat != null && punto?.lon != null;
+    const google_maps_url = tieneCoords
+      ? `https://www.google.com/maps?q=${punto.lat},${punto.lon}`
+      : 'https://www.google.com/maps/search/' +
+        encodeURIComponent(
+          [tags.name, direccion !== 'Sin dirección' ? direccion : '', barrio]
+            .filter(Boolean)
+            .join(' ')
+        );
 
     prospects.push({
       nombre: tags.name || 'Sin nombre',
       direccion,
-      barrio: tags['addr:suburb'] || tags['addr:neighbourhood'] || tags['addr:city'] || '',
+      barrio,
       telefono: tags.phone || tags['contact:phone'] || '',
       tiene_web: web !== '',
       url_web: web,
       instagram: tags['contact:instagram'] || '',
       lat: punto?.lat ?? '',
       lng: punto?.lon ?? '',
+      google_maps_url,
+      osm_url: `https://www.openstreetmap.org/${element.type}/${element.id}`,
+      query_busqueda: [tags.name, barrio, 'Buenos Aires'].filter(Boolean).join(', '),
       osm_id: String(element.id),
       osm_type: element.type,
     });

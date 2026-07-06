@@ -22,6 +22,9 @@ const COLUMNAS = [
   { id: 'instagram', title: 'instagram' },
   { id: 'lat', title: 'lat' },
   { id: 'lng', title: 'lng' },
+  { id: 'google_maps_url', title: 'google_maps_url' },
+  { id: 'osm_url', title: 'osm_url' },
+  { id: 'query_busqueda', title: 'query_busqueda' },
   { id: 'osm_id', title: 'osm_id' },
 ];
 
