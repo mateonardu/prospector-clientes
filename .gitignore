@@ -1,2 +1,7 @@
 node_modules/
 output/
+
+# Red de seguridad: este proyecto no tiene secretos, pero un .env
+# guardado acá por error (pestaña vieja del IDE) no debe llegar al repo.
+.env
+server/
